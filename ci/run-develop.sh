@@ -11,7 +11,7 @@ fi
 repo='paben101-dev/wezterm'
 git fetch origin develop
 sha=$(git rev-parse origin/develop)
-run=$(gh run list --repo "$repo" --workflow fork-checks.yml --branch develop \
+run=$(gh run list --repo "$repo" --workflow 'Fork verification' --branch develop \
   --commit "$sha" --limit 10 \
   --json databaseId,status,conclusion,url,headBranch \
   --jq '.[] | select(.headBranch == "develop") | [.databaseId, .status, (if .conclusion == "" then "pending" else .conclusion end), .url] | @tsv' | head -n 1)
