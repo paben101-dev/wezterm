@@ -2,7 +2,7 @@
 
 ## Goal and status
 
-Develop Neovim-like native copy-mode navigation as a small patch set on official WezTerm. **No third-party Vim behavior has been ported or verified yet.** The development roadmap below is not an implementation claim. Keep the stable branch at upstream until an imported patch builds and passes tests.
+Develop Neovim-like native copy-mode navigation as a small patch set on official WezTerm. `develop` now contains an **unverified** port of motions, counts, `yy`, relative line numbers, search highlights and selection fixes. `vim-enhanced` remains unchanged upstream until build, tests and manual review succeed.
 
 ## Repositories and branches
 
@@ -16,19 +16,19 @@ At inspection, `upstream/main...vim-source/main` was **181 upstream-only / 9 sou
 | --- | --- |
 | `b80b8cfde` | Correct end-of-word motion; candidate, dependent on source's earlier copy-mode state. |
 | `01140e1e5` | Removes generated tests; exclude. |
-| `442085b3e` | Core Vim motion, WORD, prefixes and text objects; candidate for selective adaptation, **not wholesale cherry-pick**. Includes unrelated formatter-only changes in cell/escape parser; exclude those. |
-| `460ba1f0b` | Multi-line movement/counts and copy-mode docs; candidate after core adaptation. |
-| `817477d23` | `yy` line copying; candidate after core adaptation. |
-| `ffbb6b823` | Relative line numbers and search navigation; optional, high-impact rendering changes requiring separate review. |
+| `442085b3e` | Core Vim motion, WORD, prefixes and text objects; selectively adapted, excluding formatter-only cell/escape-parser changes. |
+| `460ba1f0b` | Multi-line movement/counts and copy-mode docs; cherry-picked. |
+| `817477d23` | `yy` line copying; cherry-picked. |
+| `ffbb6b823` | Relative line numbers and search navigation; cherry-picked; rendering needs manual review. |
 | `7b269ae06` | Removes copy-mode tests; exclude. |
-| `ba99b3985` | Selection-copy correction and search highlights; depends on gutter/selection changes; review separately. |
+| `ba99b3985` | Selection-copy correction and search highlights; cherry-picked after gutter change. |
 | `ae498239b` | Merge of old upstream; exclude. |
 
-The source diff against its merge base touches `wezterm-gui/src/overlay/copy.rs` (935-line net change), `config/src/keyassignment.rs` (new copy-mode variants), `wezterm-cell/src/lib.rs` (formatting only), escape-parser modules (formatting only), and copy-mode docs. A direct diff against current upstream includes hundreds of unrelated reverse-upstream changes: **never merge the source branch**. Existing upstream already has word motions, search, jumps and selection; compare behavior and Lua variant compatibility before importing equivalents. API compatibility of the source implementation with current upstream is **not yet established**. No custom Rust files or upstream source changes are present yet.
+The source diff against its merge base touches `wezterm-gui/src/overlay/copy.rs` (935-line net change), `config/src/keyassignment.rs` (new copy-mode variants), `wezterm-cell/src/lib.rs` (formatting only), escape-parser modules (formatting only), and copy-mode docs. A direct diff against current upstream includes hundreds of unrelated reverse-upstream changes: **never merge the source branch**. Existing upstream already has word motions, search, jumps and selection; compare behavior and Lua variant compatibility before promotion. Fork source changes are limited to `wezterm-gui/src/overlay/copy.rs` and `config/src/keyassignment.rs`; closely coupled overlay state was not extracted into another module. API and GUI compatibility still require validation.
 
 ## Build and installation
 
-On Linux install Rust via rustup and required system packages using upstream's `./get-deps` (review its package commands first). Initialize with `git submodule update --init --recursive`, then run `cargo build --locked -p wezterm-gui` and `cargo test --locked -p wezterm-gui`; also run `cargo test --locked --workspace` when feasible. Windows requires the MSVC Rust toolchain and Strawberry Perl first on PATH; follow `docs/install/source.md` and upstream Windows CI, then run the same cargo build/test commands. Do not install or replace an existing WezTerm: run the built binary directly from `target/debug/` for manual checks. Verify copy-mode motions, counts, selections, searching, wide glyphs, and Lua keybindings interactively; GUI behavior cannot be fully covered by unit tests. No build or tests were run at initial setup (Rust toolchain absent).
+On Linux install Rust via rustup and required system packages using upstream's `./get-deps` (review its package commands first). Initialize with `git submodule update --init --recursive`, then run `cargo build --locked -p wezterm-gui` and `cargo test --locked -p wezterm-gui`; also run `cargo test --locked --workspace` when feasible. Windows requires the MSVC Rust toolchain and Strawberry Perl first on PATH; follow `docs/install/source.md` and upstream Windows CI, then run the same cargo build/test commands. Do not install or replace an existing WezTerm: run the built binary directly from `target/debug/` for manual checks. Verify copy-mode motions, counts, selections, searching, wide glyphs, and Lua keybindings interactively; GUI behavior cannot be fully covered by unit tests. Local Rust was installed, but this host lacks a C compiler and installing system dependencies requires sudo. The initial upstream-only Windows CI succeeded; Linux CI failed on stale Ubuntu package indices and now runs `apt-get update` first.
 
 ## Upstream synchronization and conflicts
 
@@ -44,4 +44,4 @@ Full normal-mode navigation; `{`/`}` and Ctrl+brace paragraph navigation; numeri
 
 ## Limitations
 
-There is no imported feature, local compiler, successful build, or GUI validation at setup time. Source-vs-current-upstream semantic equivalence and adaptation feasibility require implementation-stage investigation.
+The `develop` port remains unverified until Linux/Windows CI and manual GUI checks pass; `vim-enhanced` contains no imported functionality. Source-vs-current-upstream semantic equivalence and Lua compatibility need validation.

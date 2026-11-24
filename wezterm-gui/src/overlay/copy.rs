@@ -167,7 +167,9 @@ fn assignment_uses_count(
             push_count_digit(pending_count, 0);
             Some(0)
         }
-        CopyModeAssignment::MoveUp | CopyModeAssignment::MoveDown => Some(take_count(pending_count)),
+        CopyModeAssignment::MoveUp | CopyModeAssignment::MoveDown => {
+            Some(take_count(pending_count))
+        }
         _ => None,
     }
 }
@@ -1740,8 +1742,7 @@ impl Pane for CopyOverlay {
 
     fn get_logical_lines(&self, lines: Range<StableRowIndex>) -> Vec<LogicalLine> {
         let renderer = self.render.lock();
-        let gutter_width =
-            line_number_gutter_width(self.delegate.get_dimensions().viewport_rows);
+        let gutter_width = line_number_gutter_width(self.delegate.get_dimensions().viewport_rows);
         let search_row = renderer.compute_search_row();
         let cursor_y = renderer.cursor.y;
         drop(renderer);
@@ -1909,12 +1910,7 @@ impl Pane for CopyOverlay {
                     if stable_idx != self.search_row {
                         // Shift existing content right to make room for the gutter
                         for _ in 0..self.gutter_width {
-                            line.insert_cell(
-                                0,
-                                Cell::blank(),
-                                self.dims.cols,
-                                SEQ_ZERO,
-                            );
+                            line.insert_cell(0, Cell::blank(), self.dims.cols, SEQ_ZERO);
                         }
                         // Render the relative line number into the gutter
                         let rel: isize = stable_idx - self.cursor_y;
@@ -2169,11 +2165,7 @@ fn move_backward_word_start_in_str(s: &str, cursor: usize, style: VimWordStyle) 
         .map(|seg| seg.start)
 }
 
-fn inner_word_range_in_str(
-    s: &str,
-    cursor: usize,
-    style: VimWordStyle,
-) -> Option<(usize, usize)> {
+fn inner_word_range_in_str(s: &str, cursor: usize, style: VimWordStyle) -> Option<(usize, usize)> {
     let segments = word_segments_in_str(s, style);
     let idx = segment_containing(&segments, cursor).or_else(|| {
         segments
@@ -2691,11 +2683,26 @@ mod tests {
     #[test]
     fn vim_word_and_big_word_boundaries() {
         let text = "foo.bar baz";
-        assert_eq!(move_forward_word_start_in_str(text, 0, VimWordStyle::Normal), Some(3));
-        assert_eq!(move_forward_word_start_in_str(text, 0, VimWordStyle::Big), Some(8));
-        assert_eq!(move_backward_word_start_in_str(text, 8, VimWordStyle::Normal), Some(4));
-        assert_eq!(move_forward_word_end_in_str(text, 0, VimWordStyle::Normal), Some(2));
-        assert_eq!(inner_word_range_in_str(text, 4, VimWordStyle::Normal), Some((4, 6)));
+        assert_eq!(
+            move_forward_word_start_in_str(text, 0, VimWordStyle::Normal),
+            Some(3)
+        );
+        assert_eq!(
+            move_forward_word_start_in_str(text, 0, VimWordStyle::Big),
+            Some(8)
+        );
+        assert_eq!(
+            move_backward_word_start_in_str(text, 8, VimWordStyle::Normal),
+            Some(4)
+        );
+        assert_eq!(
+            move_forward_word_end_in_str(text, 0, VimWordStyle::Normal),
+            Some(2)
+        );
+        assert_eq!(
+            inner_word_range_in_str(text, 4, VimWordStyle::Normal),
+            Some((4, 6))
+        );
     }
 
     #[test]
@@ -2708,6 +2715,8 @@ mod tests {
         count = Some(usize::MAX);
         push_count_digit(&mut count, 9);
         assert_eq!(take_count(&mut count), usize::MAX);
+    }
+
     use wezterm_term::{CellAttributes, Line};
 
     // --- gutter width ---
