@@ -13,8 +13,9 @@ jobs:
         with:
           submodules: recursive
       - uses: dtolnay/rust-toolchain@stable
+      - run: sudo apt-get update
       - name: Install upstream Linux dependencies
-        run: ./get-deps
+        run: ./get-deps --testing
       - run: cargo build --locked -p wezterm-gui
       - run: cargo test --locked -p wezterm-gui
       - uses: actions/upload-artifact@v4

@@ -21,6 +21,7 @@ jobs:
           git switch -c integration-ci
           git -c user.name='Integration CI' -c user.email='ci@example.invalid' merge --no-ff --no-edit FETCH_HEAD
       - uses: dtolnay/rust-toolchain@stable
-      - run: ./get-deps
+      - run: sudo apt-get update
+      - run: ./get-deps --testing
       - run: cargo build --locked -p wezterm-gui
       - run: cargo test --locked -p wezterm-gui

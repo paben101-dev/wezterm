@@ -2556,4 +2556,27 @@ pub fn copy_key_table() -> KeyTable {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
+
+    #[test]
+    fn vim_word_and_big_word_boundaries() {
+        let text = "foo.bar baz";
+        assert_eq!(move_forward_word_start_in_str(text, 0, VimWordStyle::Normal), Some(3));
+        assert_eq!(move_forward_word_start_in_str(text, 0, VimWordStyle::Big), Some(8));
+        assert_eq!(move_backward_word_start_in_str(text, 8, VimWordStyle::Normal), Some(4));
+        assert_eq!(move_forward_word_end_in_str(text, 0, VimWordStyle::Normal), Some(2));
+        assert_eq!(inner_word_range_in_str(text, 4, VimWordStyle::Normal), Some((4, 6)));
+    }
+
+    #[test]
+    fn vim_count_saturates_and_resets() {
+        let mut count = None;
+        push_count_digit(&mut count, 2);
+        push_count_digit(&mut count, 5);
+        assert_eq!(take_count(&mut count), 25);
+        assert_eq!(take_count(&mut count), 1);
+        count = Some(usize::MAX);
+        push_count_digit(&mut count, 9);
+        assert_eq!(take_count(&mut count), usize::MAX);
+    }
 }
