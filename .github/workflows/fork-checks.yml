@@ -1,0 +1,44 @@
+name: Fork verification
+on:
+  push:
+    branches: [develop, vim-enhanced]
+  pull_request:
+    branches: [develop, vim-enhanced]
+  workflow_dispatch:
+jobs:
+  linux:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Install upstream Linux dependencies
+        run: ./get-deps
+      - run: cargo build --locked -p wezterm-gui
+      - run: cargo test --locked -p wezterm-gui
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wezterm-gui-linux-unverified
+          path: target/debug/wezterm-gui
+          if-no-files-found: error
+  windows:
+    runs-on: windows-2025
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc
+      - name: Build and test
+        shell: cmd
+        run: |
+          set PATH=C:\Strawberry\perl\bin;%PATH%
+          cargo build --locked -p wezterm-gui
+          cargo test --locked -p wezterm-gui
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wezterm-gui-windows-unverified
+          path: target/debug/wezterm-gui.exe
+          if-no-files-found: error

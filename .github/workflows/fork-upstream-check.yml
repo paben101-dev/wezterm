@@ -1,0 +1,26 @@
+name: Check upstream integration
+on:
+  schedule:
+    - cron: '17 6 * * 1'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  integration:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: vim-enhanced
+          fetch-depth: 0
+          submodules: recursive
+      - name: Probe upstream merge without changing stable
+        shell: bash
+        run: |
+          git fetch https://github.com/wezterm/wezterm.git main
+          git switch -c integration-ci
+          git -c user.name='Integration CI' -c user.email='ci@example.invalid' merge --no-ff --no-edit FETCH_HEAD
+      - uses: dtolnay/rust-toolchain@stable
+      - run: ./get-deps
+      - run: cargo build --locked -p wezterm-gui
+      - run: cargo test --locked -p wezterm-gui
