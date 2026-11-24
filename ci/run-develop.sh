@@ -1,29 +1,41 @@
 #!/usr/bin/env bash
-# Build and run the latest fork development branch without installing it.
+# Run the CI-built GUI for the latest origin/develop commit; never build locally.
 set -euo pipefail
 
 cd "$(dirname "${BASH_SOURCE[0]}")/.."
-export PATH="$HOME/.cargo/bin:$PATH"
-
-if [[ -n "$(git status --porcelain)" ]]; then
-  echo 'Working tree is not clean. Commit or stash your changes before updating develop.' >&2
-  exit 1
-fi
-if ! command -v cargo >/dev/null 2>&1; then
-  echo 'Cargo is missing. Install Rust with rustup: https://rustup.rs/' >&2
-  exit 1
-fi
-if ! command -v cc >/dev/null 2>&1; then
-  echo 'A C compiler is missing. On Ubuntu, install build-essential and the dependencies described in docs/install/source.md.' >&2
+if ! command -v gh >/dev/null 2>&1; then
+  echo 'GitHub CLI (gh) is required: https://cli.github.com/' >&2
   exit 1
 fi
 
+repo='paben101-dev/wezterm'
 git fetch origin develop
-git switch develop
-git merge --ff-only origin/develop
-git submodule update --init --recursive
-cargo build --locked -p wezterm-gui
+sha=$(git rev-parse origin/develop)
+run=$(gh run list --repo "$repo" --workflow fork-checks.yml --branch develop \
+  --commit "$sha" --limit 10 \
+  --json databaseId,status,conclusion,url,headBranch \
+  --jq '.[] | select(.headBranch == "develop") | [.databaseId, .status, (if .conclusion == "" then "pending" else .conclusion end), .url] | @tsv' | head -n 1)
+if [[ -z "$run" ]]; then
+  echo "No CI run found for develop commit $sha. Wait for the Fork verification workflow." >&2
+  exit 1
+fi
+IFS=$'\t' read -r run_id status conclusion url <<< "$run"
+if [[ "$status" != completed ]]; then
+  echo "Waiting for CI on develop commit $sha: $url"
+  gh run watch "$run_id" --repo "$repo" --exit-status --interval 30
+elif [[ "$conclusion" != success ]]; then
+  echo "CI did not pass for develop commit $sha: $url ($conclusion)" >&2
+  exit 1
+fi
 
-# -n ignores the user's personal Lua configuration.  Never install or replace
-# the user's existing WezTerm; run only the executable produced by this build.
-exec target/debug/wezterm-gui -n start --always-new-process "$@"
+artifact_dir="target/ci-develop/$sha"
+binary="$artifact_dir/wezterm-gui"
+if [[ ! -f "$binary" ]]; then
+  mkdir -p "$artifact_dir"
+  gh run download "$run_id" --repo "$repo" \
+    --name wezterm-gui-linux-unverified --dir "$artifact_dir"
+fi
+chmod u+x "$binary"
+echo "Running CI build for develop commit $sha (run $run_id)."
+# Do not install anything or load the user's personal wezterm.lua.
+exec "$binary" -n start --always-new-process "$@"
