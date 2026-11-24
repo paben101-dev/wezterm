@@ -2,7 +2,7 @@
 
 ## Goal and status
 
-Develop Neovim-like native copy-mode navigation as a small patch set on official WezTerm. `develop` now contains an **unverified** port of motions, counts, `yy`, relative line numbers, search highlights and selection fixes. `vim-enhanced` remains unchanged upstream until build, tests and manual review succeed.
+Develop Neovim-like native copy-mode navigation as a small patch set on official WezTerm. `develop` contains a port of motions, counts, `yy`, relative line numbers, search highlights and selection fixes. Linux and Windows CI built and tested the port on [run 45509956205](https://github.com/paben101-dev/wezterm/actions/runs/45509956205); manual GUI behavior remains unverified. `vim-enhanced` holds the CI-verified patch set.
 
 ## Repositories and branches
 
@@ -44,4 +44,4 @@ Full normal-mode navigation; `{`/`}` and Ctrl+brace paragraph navigation; numeri
 
 ## Limitations
 
-The `develop` port remains unverified until Linux/Windows CI and manual GUI checks pass; `vim-enhanced` contains no imported functionality. Source-vs-current-upstream semantic equivalence and Lua compatibility need validation.
+Linux/Windows GUI package build and package-level unit tests succeeded in CI, including the added word/count and imported gutter tests. Interactive GUI, copy/selection on wrapped and wide glyph lines, Lua compatibility and full-workspace tests are not yet verified. Source-vs-current-upstream semantic equivalence still needs manual review.
