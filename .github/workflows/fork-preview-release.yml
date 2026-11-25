@@ -1,0 +1,115 @@
+name: Fork preview release
+
+on:
+  push:
+    tags:
+      - 'fork-v*-preview.*'
+
+permissions:
+  contents: read
+
+jobs:
+  linux:
+    if: github.repository == 'paben101-dev/wezterm'
+    runs-on: ubuntu-24.04
+    env:
+      VERSION: ${{ github.ref_name }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: dtolnay/rust-toolchain@stable
+      - run: sudo apt-get update
+      - run: ./get-deps --testing
+      - name: Build release binaries and run GUI tests
+        run: |
+          cargo build --locked --release -p wezterm -p wezterm-gui -p wezterm-mux-server -p strip-ansi-escapes
+          cargo test --locked --release -p wezterm-gui
+      - name: Create portable Linux archive
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$VERSION" =~ ^fork-v[0-9]{4}\.[0-9]{2}\.[0-9]{2}-preview\.[0-9]+$ ]] || exit 1
+          name="wezterm-vim-linux-x86_64-ubuntu24.04-$VERSION"
+          mkdir -p "dist/$name"
+          cp target/release/{wezterm,wezterm-gui,wezterm-mux-server,strip-ansi-escapes} "dist/$name/"
+          cp LICENSE.md "dist/$name/"
+          cp -r assets/shell-integration "dist/$name/"
+          tar -C dist -cJf "dist/$name.tar.xz" "$name"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: fork-linux-release
+          path: dist/*.tar.xz
+          if-no-files-found: error
+
+  windows:
+    if: github.repository == 'paben101-dev/wezterm'
+    runs-on: windows-2025
+    env:
+      VERSION: ${{ github.ref_name }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc
+      - name: Build release binaries and run GUI tests
+        shell: cmd
+        run: |
+          set PATH=C:\Strawberry\perl\bin;%PATH%
+          cargo build --locked --release -p wezterm -p wezterm-gui -p wezterm-mux-server -p strip-ansi-escapes
+          cargo test --locked --release -p wezterm-gui
+      - name: Create portable Windows archive
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          if ($env:VERSION -notmatch '^fork-v\d{4}\.\d{2}\.\d{2}-preview\.\d+$') { throw 'Invalid fork version' }
+          $name = "wezterm-vim-windows-x86_64-$env:VERSION"
+          $dest = "dist/$name"
+          New-Item -ItemType Directory -Force "$dest/mesa" | Out-Null
+          Copy-Item target/release/wezterm.exe,target/release/wezterm-gui.exe,target/release/wezterm-mux-server.exe,target/release/strip-ansi-escapes.exe,target/release/conpty.dll,target/release/OpenConsole.exe,target/release/libEGL.dll,target/release/libGLESv2.dll,LICENSE.md "$dest/"
+          Copy-Item target/release/mesa/opengl32.dll "$dest/mesa/"
+          Compress-Archive -Path "$dest" -DestinationPath "dist/$name.zip"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: fork-windows-release
+          path: dist/*.zip
+          if-no-files-found: error
+
+  publish:
+    needs: [linux, windows]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      VERSION: ${{ github.ref_name }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Verify tagged commit still matches stable branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$VERSION" =~ ^fork-v[0-9]{4}\.[0-9]{2}\.[0-9]{2}-preview\.[0-9]+$ ]]
+          git fetch origin vim-enhanced
+          test "$(git rev-parse FETCH_HEAD)" = "$(git rev-parse "$VERSION^{commit}")"
+          test "$(git rev-parse "$VERSION^{commit}")" = "$GITHUB_SHA"
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: fork-*-release
+          merge-multiple: true
+          path: dist
+      - name: Publish versioned preview and checksums
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(find dist -maxdepth 1 -name '*.tar.xz' | wc -l)" -eq 1
+          test "$(find dist -maxdepth 1 -name '*.zip' | wc -l)" -eq 1
+          (cd dist && sha256sum ./*.tar.xz ./*.zip > SHA256SUMS)
+          gh release create "$VERSION" dist/*.tar.xz dist/*.zip dist/SHA256SUMS \
+            --repo "$GITHUB_REPOSITORY" --verify-tag --prerelease \
+            --title "WezTerm Vim-enhanced $VERSION (preview)" \
+            --notes 'Portable, unsigned preview builds from vim-enhanced. Extract and run alongside your installed WezTerm; do not install the upstream-identical package/installer over your existing installation. Linux archive built on Ubuntu 24.04 and requires compatible runtime libraries. Windows archive includes the required bundled DLLs. See CUSTOM_FORK.md for testing and limitations.'
