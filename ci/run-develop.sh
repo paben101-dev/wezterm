@@ -2,6 +2,16 @@
 # Run the CI-built GUI for the latest origin/develop commit; never build locally.
 set -euo pipefail
 
+config_args=(-n)
+if [[ "${1:-}" == --config-file ]]; then
+  if [[ $# -lt 2 || ! -f "$2" ]]; then
+    echo 'Usage: run-develop.sh [--config-file PATH] [wezterm start arguments...]' >&2
+    exit 1
+  fi
+  config_args=(--config-file "$(realpath "$2")")
+  shift 2
+fi
+
 cd "$(dirname "${BASH_SOURCE[0]}")/.."
 if ! command -v gh >/dev/null 2>&1; then
   echo 'GitHub CLI (gh) is required: https://cli.github.com/' >&2
@@ -37,5 +47,5 @@ if [[ ! -f "$binary" ]]; then
 fi
 chmod u+x "$binary"
 echo "Running CI build for develop commit $sha (run $run_id)."
-# Do not install anything or load the user's personal wezterm.lua.
-exec "$binary" -n start --always-new-process "$@"
+# Do not install anything; personal Lua config is loaded only when explicitly requested.
+exec "$binary" "${config_args[@]}" start --always-new-process "$@"
