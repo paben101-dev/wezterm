@@ -845,6 +845,23 @@ impl CopyRenderable {
         self.select_to_cursor_pos();
     }
 
+    fn move_by_paragraph(&mut self, direction: StableRowIndex) {
+        let dims = self.delegate.get_dimensions();
+        let top = dims.scrollback_top;
+        let bottom = top + dims.scrollback_rows as StableRowIndex - 1;
+        let delegate = &self.delegate;
+        let target = paragraph_target(self.cursor.y, top, bottom, direction, |row| {
+            let (first, lines) = delegate.get_lines(row..row + 1);
+            lines
+                .get((row - first) as usize)
+                .map(|line| line.as_str().trim().is_empty())
+                .unwrap_or(false)
+        });
+        self.cursor.y = target;
+        self.cursor.x = 0;
+        self.select_to_cursor_pos();
+    }
+
     fn move_to_start_of_line(&mut self) {
         self.cursor.x = 0;
         self.select_to_cursor_pos();
@@ -1630,6 +1647,8 @@ impl Pane for CopyOverlay {
                         let count = render.assignment_uses_count(assignment).unwrap_or(1);
                         render.move_down_rows(count);
                     }
+                    MoveToPreviousParagraph => render.move_by_paragraph(-1),
+                    MoveToNextParagraph => render.move_by_paragraph(1),
                     MoveByPage(n) => render.move_by_page(**n),
                     PageUp => render.move_by_page(-1.0),
                     PageDown => render.move_by_page(1.0),
@@ -2070,6 +2089,41 @@ fn small_word_kind(s: &str) -> WordSegmentKind {
     }
 }
 
+/// Vim-style paragraph boundary: the next blank row, skipping the current
+/// blank run if already on one. When no further blank row exists, use the edge.
+fn paragraph_target(
+    cursor: StableRowIndex,
+    top: StableRowIndex,
+    bottom: StableRowIndex,
+    direction: StableRowIndex,
+    mut is_blank: impl FnMut(StableRowIndex) -> bool,
+) -> StableRowIndex {
+    debug_assert!(direction == -1 || direction == 1);
+    if bottom < top {
+        return cursor;
+    }
+    let mut row = cursor.clamp(top, bottom);
+    let mut seen_text = !is_blank(row);
+    while let Some(next) = row.checked_add(direction) {
+        if next < top || next > bottom {
+            break;
+        }
+        row = next;
+        if is_blank(row) {
+            if seen_text {
+                return row;
+            }
+        } else {
+            seen_text = true;
+        }
+    }
+    if direction < 0 {
+        top
+    } else {
+        bottom
+    }
+}
+
 fn word_segments_in_str(s: &str, style: VimWordStyle) -> Vec<WordSegment> {
     let mut segments: Vec<WordSegment> = Vec::new();
     let mut pos = 0;
@@ -2443,6 +2497,26 @@ pub fn copy_key_table() -> KeyTable {
             KeyAssignment::CopyMode(CopyModeAssignment::MoveToStartOfLine),
         ),
         (
+            WKeyCode::Char('{'),
+            Modifiers::NONE,
+            KeyAssignment::CopyMode(CopyModeAssignment::MoveToPreviousParagraph),
+        ),
+        (
+            WKeyCode::Char('{'),
+            Modifiers::SHIFT,
+            KeyAssignment::CopyMode(CopyModeAssignment::MoveToPreviousParagraph),
+        ),
+        (
+            WKeyCode::Char('}'),
+            Modifiers::NONE,
+            KeyAssignment::CopyMode(CopyModeAssignment::MoveToNextParagraph),
+        ),
+        (
+            WKeyCode::Char('}'),
+            Modifiers::SHIFT,
+            KeyAssignment::CopyMode(CopyModeAssignment::MoveToNextParagraph),
+        ),
+        (
             WKeyCode::Char('\r'),
             Modifiers::NONE,
             KeyAssignment::CopyMode(CopyModeAssignment::MoveToStartOfNextLine),
@@ -2679,6 +2753,18 @@ pub fn copy_key_table() -> KeyTable {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn paragraph_motions_find_blank_boundaries_and_edges() {
+        let rows = [false, false, true, true, false, false, true, false];
+        let target = |at, direction| paragraph_target(at, 0, 7, direction, |y| rows[y as usize]);
+        assert_eq!(target(0, 1), 2);
+        assert_eq!(target(2, 1), 6); // Skip the current blank run.
+        assert_eq!(target(5, -1), 3);
+        assert_eq!(target(3, -1), 0);
+        assert_eq!(target(7, 1), 7);
+        assert_eq!(target(0, -1), 0);
+    }
 
     #[test]
     fn vim_word_and_big_word_boundaries() {

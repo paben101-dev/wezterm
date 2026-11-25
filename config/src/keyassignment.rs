@@ -706,6 +706,8 @@ pub enum CopyModeAssignment {
     MoveLeft,
     MoveUp,
     MoveDown,
+    MoveToPreviousParagraph,
+    MoveToNextParagraph,
     MoveByPage(NotNan<f64>),
     PageUp,
     PageDown,

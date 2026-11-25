@@ -2,7 +2,7 @@
 
 ## Goal and status
 
-Develop Neovim-like native copy-mode navigation as a small patch set on official WezTerm. `develop` contains a port of motions, counts, `yy`, relative line numbers, search highlights and selection fixes. Linux and Windows CI built and tested the port on [run 45509956205](https://github.com/paben101-dev/wezterm/actions/runs/45509956205); manual GUI behavior remains unverified. `vim-enhanced` holds the CI-verified patch set.
+Develop Neovim-like native copy-mode navigation as a small patch set on official WezTerm. `develop` contains a port of motions, counts, `yy`, relative line numbers, search highlights and selection fixes, plus fork-local `{`/`}` paragraph motions. Linux and Windows CI built and tested the earlier port on [run 45509956205](https://github.com/paben101-dev/wezterm/actions/runs/45509956205); paragraph motions require their own CI run before promotion. `vim-enhanced` holds the earlier CI-verified patch set.
 
 ## Repositories and branches
 
@@ -42,7 +42,7 @@ Upstream already supplies Linux/Windows build workflows and artifacts; fork-spec
 
 ## Roadmap (not implemented)
 
-Full normal-mode navigation; `{`/`}` and Ctrl+brace paragraph navigation; numerical counts; word/WORD motions; character search and repeat; visual character/line/block modes; text objects; search/repeat search; marks/jump history; yank/clipboard; Lua-configurable keybindings. Prioritize upstream compatibility and regression tests for every increment.
+Full normal-mode navigation; Ctrl+brace paragraph bindings (plain `{`/`}` paragraph motions are implemented on `develop`); expanded numerical counts; word/WORD motions; character search and repeat; visual character/line/block modes; text objects; search/repeat search; marks/jump history; yank/clipboard; Lua-configurable keybindings. Prioritize upstream compatibility and regression tests for every increment.
 
 ## Limitations
 

@@ -53,6 +53,8 @@ The default key assignments in copy mode are as follows:
 |                       | <kbd>b</kbd>             |
 | Move forward one word end    | <kbd>e</kbd> {{since('20230320-124340-559cb7b0', inline=True)}}|
 | Move to start of this line     | <kbd>0</kbd> |
+| Move to previous paragraph (blank line) | <kbd>{</kbd> (Shift + `[`) |
+| Move to next paragraph (blank line) | <kbd>}</kbd> (Shift + `]`) |
 |                                | <kbd>Home</kbd> |
 | Move to start of next line     | <kbd>Enter</kbd> |
 | Move to end of this line       | <kbd>$</kbd> |
